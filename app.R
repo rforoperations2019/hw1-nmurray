@@ -1,16 +1,13 @@
-#
-# This is a Shiny web application. You can run the application by clicking
-# the 'Run App' button above.
-#
-# Find out more about building applications with Shiny here:
-#
-#    http://shiny.rstudio.com/
-#
 
-library(shiny)
+library(ggplot2)
+library(DT)
+library(stringr)
+library(dplyr)
+library(tools)
+
 load("ny_brewery.Rdata")
 
-# Define UI for application that draws a histogram
+# Define UI f
 ui <- fluidPage(
    
    # Application title
@@ -18,7 +15,7 @@ ui <- fluidPage(
    
    # Sidebar 
    sidebarLayout(
-     
+     # Inputs: Select variables to plot ------------------------------
       sidebarPanel(
         
         # Show data table ---------------------------------------------
@@ -26,13 +23,23 @@ ui <- fluidPage(
                       label = "Show data table",
                       value = TRUE),
         
-        # Select Timeframe --------------------------------------------
-        dateRangeInput(inputId = "show_date_range",
-                       label = "Date Range",
-                       start = "1970-10-08",
-                       end = "2022-09-30",
-                       format = "mm/dd/yyyy",
-                       startview = "year"),
+        # # Inputs Plot Times Series Data for License Info
+        # # Select License Issue --------------------------------------------
+        # dateRangeInput(inputId = "date_issued",
+        #                label = "Date License Issued",
+        #                start = "1970-10-08",
+        #                end = "2022-09-30",
+        #                format = "mm/dd/yyyy",
+        #                startview = "year"),
+        # 
+        # # Select License Expiration --------------------------------------------
+        # dateRangeInput(inputId = "date_expire",
+        #                label = "Date License Set to Expire",
+        #                start = "1970-10-08",
+        #                end = "2022-09-30",
+        #                format = "mm/dd/yyyy",
+        #                startview = "year"),
+        
         # Select Input (License type)-----------------------------
         selectInput(inputId = "license_type_Name", 
                     label = "Select License Type",
@@ -48,11 +55,11 @@ ui <- fluidPage(
                                 "RESTAURANT BREWER",
                                 "WINERY",
                                 "WINERY / FARM WINERY RETAIL"),
-                    selected = "License.Type.Name",
-                    multiple = TRUE),
+                    selected = "BREWER",
+                     multiple = TRUE),
         
-        # Select Input (County of License) -----------------------------
-        selectInput(inputId = "license_type_Name",
+        #Select Licensee County---------------------------------------
+        selectInput(inputId = "licensee_county",
                     label = "Select County of Licensee",
                     choices = c("ALBANY","ALLEGANY","BRONX","BROOME","CATTARAUGUS", "CAYUGA",
                                 "CHAUTAUQUA", "CHEMUNG", "CHENANGO", "CLINTON", "COLUMBIA","CORTLAND",
@@ -63,38 +70,75 @@ ui <- fluidPage(
                                 "OSWEGO", "OTSEGO", "PUTNAM", "QUEENS", "RENSSELAER", "RICHMOND",
                                 "ROCKLAND", "SARATOGA", "SCHENECTADY", "SCHOHARIE", "SCHUYLER", "SENECA",
                                 "ST LAWRENCE", "STEUBEN", "SUFFOLK", "SULLIVAN","TIOGA","TOMPKINS",
-                                "ULSTER", "WARREN", "WASHINGTON", "WAYNE", "WESTCHESTER", "WYOMING"),
-                    multiple = TRUE)
+                                "ULSTER", "WARREN", "WASHINGTON", "WAYNE", "WESTCHESTER", "WYOMING")),
         
-        #ADD ANOTHER INPUT HERE---------------------------------------
+        # Select fill for expiration date plot------------------------------------------------
+        selectInput(inputId = "license_type_code", 
+                    label = "License Code Type",
+                    choices = c("D","DA", "DB",
+                                "DC", "DD", "DW",
+                                "FD", "FW", "MI",
+                                "MR", "WA"),
+                    selected = "FW",
+                    multiple = TRUE),
         
-        #PLOT oor FIGURE 1--------------------------------------------
+        # Select fill for License Issue date  plot ------------------------
+        checkboxGroupInput(inputId = "office_name",
+                           label = "Select Name of Agency Office):",
+                           choices = c("Albany", "Buffalo", "New York City"),
+                           selected = "Buffalo")
         
-        #PLOT oor FIGURE 2--------------------------------------------
-        
-        #PLOT oor FIGURE 3--------------------------------------------
 
        ),
-
+   # Output: -------------------------------------------------------
       mainPanel(
         # Show data table ---------------------------------------------
-        DT::dataTableOutput(outputId = "brewtable")
+        DT::dataTableOutput(outputId = "brewtable"),
+        
+        # Show License PLot--------------------------------------------
+        plotOutput(outputId = "license_plot"),
+             
+        #PLOT or FIGURE 2: Show Expiration Date Scatterplot--------------------------------------------
+        plotOutput(outputId = "expiration_plot"),
+        
+        #PLOT or FIGURE 3--------------------------------------------
+        plotOutput(outputId = "issue_plot")
       )
    )
 )
 
-server <- function(input, output) {
-   
+server <- function(input, output, session) {
+  
   # Print data table if checked -------------------------------------
   output$brewtable <- DT::renderDataTable(
     if(input$show_data){
-      DT::datatable(data = df_brew[, 1:7],
+      DT::datatable(data = df_brew[, 1:7], 
                     options = list(pageLength = 10), 
                     rownames = FALSE)
     }
   )
+  # # Show Bar PLot For County Level Info-------------------------------
+  output$license_plot <- renderPlot({
+    ggplot(df_brew, aes(License.Type.Name))+ 
+      geom_bar(aes(fill = input$licensee_county))+
+      theme(axis.text.x = element_text(angle = 90))
+    }
+   )
+  # # Show Time Series plot Plot for Expiration Date by License Type Code -----------------------------
+  output$expiration_plot <- renderPlot({
+     ggplot(df_brew)+
+     geom_bar(mapping = aes(x = License.Expiration.Date, fill = input$license_type_code), position = "dodge") +
+     theme(axis.text.x = element_text(angle = 90)) +
+     scale_x_date(date_labels = "%b-%Y")
+    }
+   )
+  # Show Denisty Plot for License Issue Date By Agency Zone Office Name
+  output$issue_plot <- renderPlot(
+    ggplot(df_brew, aes(x=License.Original.Issue.Date, fill=input$office_name)) +
+      geom_density() + 
+      labs(title="License Issue Date by Office Zone", x="Date Issued")
+  )
 }
-
-# Run the application 
+  # Run the application -----------------------------------------------
 shinyApp(ui = ui, server = server)
 
