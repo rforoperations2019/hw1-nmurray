@@ -18,11 +18,11 @@ ui <- fluidPage(
      # Inputs: Select variables to plot ------------------------------
       sidebarPanel(
         
-        # Show data table ---------------------------------------------
+        # # Show data table ---------------------------------------------
         checkboxInput(inputId = "show_data",
-                      label = "Show data table",
-                      value = TRUE),
-        
+                       label = "Show data table",
+                       value = TRUE),
+
         # # Inputs Plot Times Series Data for License Info
         # # Select License Issue --------------------------------------------
         # dateRangeInput(inputId = "date_issued",
@@ -109,19 +109,19 @@ ui <- fluidPage(
 
 server <- function(input, output, session) {
   
-  # Print data table if checked -------------------------------------
-  output$brewtable <- DT::renderDataTable(
-    if(input$show_data){
-      DT::datatable(data = df_brew[, 1:7], 
-                    options = list(pageLength = 10), 
-                    rownames = FALSE)
-    }
-  )
+  #Create a subset to filter for License Name Type------------------------------------
+  dfbrew_subset <- reactive({
+    req(output$licensee_county)
+    filter(df_brew, County.Name..Licensee. %in% licensee_county)
+  })
+
   # # Show Bar PLot For County Level Info-------------------------------
   output$license_plot <- renderPlot({
-    ggplot(df_brew, aes(License.Type.Name))+ 
+    
+    ggplot(df_brew, aes(input$license_type_Name))+ 
       geom_bar(aes(fill = input$licensee_county))+
       theme(axis.text.x = element_text(angle = 90))
+    
     }
    )
   # # Show Time Series plot Plot for Expiration Date by License Type Code -----------------------------
@@ -133,10 +133,19 @@ server <- function(input, output, session) {
     }
    )
   # Show Denisty Plot for License Issue Date By Agency Zone Office Name
-  output$issue_plot <- renderPlot(
+  output$issue_plot <- renderPlot({
     ggplot(df_brew, aes(x=License.Original.Issue.Date, fill=input$office_name)) +
       geom_density() + 
       labs(title="License Issue Date by Office Zone", x="Date Issued")
+    }
+  )
+  #Print data table if checked -------------------------------------
+  output$brewtable <- DT::renderDataTable(
+    if(input$show_data){
+      DT::datatable(data = dfbrew_subset()[, 1:5],
+                    options = list(pageLength = 5),
+                    rownames = FALSE)
+    }
   )
 }
   # Run the application -----------------------------------------------
