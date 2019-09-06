@@ -21,6 +21,41 @@ ui <- fluidPage(
      
      # Inputs: Select variables to plot ------------------------------
       sidebarPanel(
+        
+        h4("Data Output Displays By County"),
+        
+        #Select Licensee County---------------------------------------
+        selectInput(inputId = "licensee_county",
+                    label = "Select County of Licensee",
+                    choices = c("ALBANY","ALLEGANY","BRONX","BROOME","CATTARAUGUS", "CAYUGA",
+                                "CHAUTAUQUA", "CHEMUNG", "CHENANGO", "CLINTON", "COLUMBIA","CORTLAND",
+                                "DELAWARE", "DUTCHESS", "ERIE", "ESSEX", "FRANKLIN", "FULTON",
+                                "GENESEE", "GREENE", "HERKIMER", "JEFFERSON", "KINGS",  "LEWIS",
+                                "LIVINGSTON", "MADISON", "MONROE", "MONTGOMERY", "NASSAU", "NEW YORK",
+                                "NIAGARA", "ONEIDA", "ONONDAGA", "ONTARIO", "ORANGE", "ORLEANS",
+                                "OSWEGO", "OTSEGO", "PUTNAM", "QUEENS", "RENSSELAER", "RICHMOND",
+                                "ROCKLAND", "SARATOGA", "SCHENECTADY", "SCHOHARIE", "SCHUYLER", "SENECA",
+                                "ST LAWRENCE", "STEUBEN", "SUFFOLK", "SULLIVAN","TIOGA","TOMPKINS",
+                                "ULSTER", "WARREN", "WASHINGTON", "WAYNE", "WESTCHESTER", "WYOMING")),
+        
+        #Select Brewery Name---------------------------------------
+        selectInput(inputId = "premise",
+                    label = "Select Brewery Name",
+                    choices = premises),
+        
+        
+        # Expiration Date Range Input ---------------------------
+        dateInput(inputId = "date_expire",
+                  label = "Date License Set to Expire",
+                  max =   "2022-05-31"),
+        
+        
+        # # Show data table ---------------------------------------------
+        checkboxInput(inputId = "show_data",
+                      label = "Show data table",
+                      value = TRUE),
+        
+        
         h5("Data Output Displays By License"),
         
         
@@ -40,35 +75,8 @@ ui <- fluidPage(
                                 "WINERY",
                                 "WINERY / FARM WINERY RETAIL"),
                     selected = "BREWER"),
-        
-        # Expiration Date Range Input ---------------------------
-        dateInput(inputId = "date_expire",
-                       label = "Date License Set to Expire",
-                       max =   "2022-05-31"),
-        
+
     
-        
-        h5("Data Output Displays By Location"),
-        
-        #Select Licensee County---------------------------------------
-        selectInput(inputId = "licensee_county",
-                    label = "Select County of Licensee",
-                    choices = c("ALBANY","ALLEGANY","BRONX","BROOME","CATTARAUGUS", "CAYUGA",
-                                "CHAUTAUQUA", "CHEMUNG", "CHENANGO", "CLINTON", "COLUMBIA","CORTLAND",
-                                "DELAWARE", "DUTCHESS", "ERIE", "ESSEX", "FRANKLIN", "FULTON",
-                                "GENESEE", "GREENE", "HERKIMER", "JEFFERSON", "KINGS",  "LEWIS",
-                                "LIVINGSTON", "MADISON", "MONROE", "MONTGOMERY", "NASSAU", "NEW YORK",
-                                "NIAGARA", "ONEIDA", "ONONDAGA", "ONTARIO", "ORANGE", "ORLEANS",
-                                "OSWEGO", "OTSEGO", "PUTNAM", "QUEENS", "RENSSELAER", "RICHMOND",
-                                "ROCKLAND", "SARATOGA", "SCHENECTADY", "SCHOHARIE", "SCHUYLER", "SENECA",
-                                "ST LAWRENCE", "STEUBEN", "SUFFOLK", "SULLIVAN","TIOGA","TOMPKINS",
-                                "ULSTER", "WARREN", "WASHINGTON", "WAYNE", "WESTCHESTER", "WYOMING")),
-        
-        # # Show data table ---------------------------------------------
-        checkboxInput(inputId = "show_data",
-                      label = "Show data table",
-                      value = TRUE),
-     
      # Select sample size ----------------------------------------------------
      numericInput(inputId = "n_samp", 
                   label = "Number of Counties:", 
@@ -77,6 +85,7 @@ ui <- fluidPage(
      
      ## Download Button--------------------------------------------------------
      downloadButton("downloadData", "Download All Data")
+     
    ),
 
    # Output: -------------------------------------------------------
@@ -104,8 +113,7 @@ ui <- fluidPage(
 
 server  <- function(input, output, session){
   
-  
-  #Output for download
+  #Output for download-----------------------------------------
   data_to_download <- df_brew
   
   #Create a subset to filter for County------------------------------------
@@ -180,14 +188,15 @@ server  <- function(input, output, session){
   
   ## Show Dotplot for reactive expiration date 
   
-  days_left_expire <- reactive({
-    as.numeric(order(input$date_expire -Sys.Date())) 
-    }
-  ) 
+  # days_left_expire <-reactive({as.numeric(order(df_brew$License.Expiration.Date -Sys.Date()))})
+  days_left_expire <-reactive({as.numeric(order(input$date_expire -Sys.Date()))})
+  # days_left_expire <-as.numeric(order(dfbrew_subset()$License.Expiration.Date -Sys.Date()))
   
   output$dotplot <- renderPlot({
-    dotchart(days_left_expire(), labels = expire_subset()$Premises.Name,
-             cex = .7, xlim = range(c(1,length(days_left_expire()))),
+    
+    
+    dotchart(days_left_expire(), labels = input$premise,
+             cex = .7, xlim = c(1,1000),
              main = "Days Left until License Expires", 
              xlab = "days")
     }
@@ -201,7 +210,8 @@ server  <- function(input, output, session){
                     rownames = FALSE)
     }
   )
-  # Download Data
+  
+  # Download All  Data
   output$downloadData <- downloadHandler(
     filename = function() {
       paste("data", Sys.Date(), '.csv', sep='')
@@ -210,6 +220,8 @@ server  <- function(input, output, session){
       write.csv(data_to_download, con)
     }
   )
+  
+  
 }
 # Run the application -----------------------------------------------
 shinyApp(ui = ui, server = server)

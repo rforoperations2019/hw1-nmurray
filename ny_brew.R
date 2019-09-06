@@ -25,7 +25,11 @@ df_brew$License.Expiration.Date <- anytime::anydate(df_brew$License.Expiration.D
 #Drop Data Error
 df_brew <- subset(df_brew, df_brew$License.Expiration.Date != "2100-06-30")
 
+premises <- as.list(levels(df_brew$Premises.Name))
+
 #Save and write for Shiny Use
 write.csv(df_brew, file = "ny_brew_data.csv")
-saveRDS(df_brew, file = "ny_brewery")
+# saveRDS(df_brew, file = "ny_brewery")
 save(df_brew, file = "ny_brewery.Rdata")
+
+
