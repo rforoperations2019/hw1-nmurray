@@ -1,10 +1,12 @@
-
+library(shiny)
 library(ggplot2)
 library(DT)
 library(stringr)
 library(dplyr)
 library(tools)
 library(shinythemes)
+library(plotly)
+
 
 load("ny_brewery.Rdata")
 
@@ -38,17 +40,7 @@ ui <- fluidPage(
                                 "ST LAWRENCE", "STEUBEN", "SUFFOLK", "SULLIVAN","TIOGA","TOMPKINS",
                                 "ULSTER", "WARREN", "WASHINGTON", "WAYNE", "WESTCHESTER", "WYOMING")),
         
-        #Select Brewery Name---------------------------------------
-        selectInput(inputId = "premise",
-                    label = "Select Brewery Name",
-                    choices = premises),
-        
-        
-        # Expiration Date Range Input ---------------------------
-        dateInput(inputId = "date_expire",
-                  label = "Date License Set to Expire",
-                  max =   "2022-05-31"),
-        
+
         
         # # Show data table ---------------------------------------------
         checkboxInput(inputId = "show_data",
@@ -101,15 +93,14 @@ ui <- fluidPage(
                         plotOutput(outputId = "issue_plot"))),
         fluidRow(column(12,
                         # Show data table ---------------------------------------------
-                        plotOutput(outputId = "dotplot"))),
+                        plotlyOutput(outputId = "dotplot"))),
         fluidRow(column(12,
                         # Show data table ---------------------------------------------
                         DT::dataTableOutput(outputId = "brewtable")))
 
       )
    )
-   )
-   
+  )
 
 server  <- function(input, output, session){
   
@@ -128,13 +119,7 @@ server  <- function(input, output, session){
     filter(df_brew, License.Type.Name %in% input$license_type_Name)
     }
   )
-  
-  # Create Subset to filter by Expiration Date---------------------------
-  expire_subset <- reactive({
-    req(input$date_expire)
-    filter(df_brew, License.Expiration.Date %in% input$date_expire)
-    }
-  )
+
   
   # Update the maximum allowed n_samp for selected Counties ------
   observe({
@@ -160,8 +145,7 @@ server  <- function(input, output, session){
       theme(axis.text.x = element_text(angle = 90))+ 
       labs(x = paste("License Type"),
            y = "Count",
-           title = paste("License Type By County"))+
-      scale_color_brewer(palette="Dark2")
+           title = paste("License Type By County"))
     
     }
    )
@@ -186,21 +170,22 @@ server  <- function(input, output, session){
     }
   )
   
-  ## Show Dotplot for reactive expiration date 
   
-  # days_left_expire <-reactive({as.numeric(order(df_brew$License.Expiration.Date -Sys.Date()))})
-  days_left_expire <-reactive({as.numeric(order(input$date_expire -Sys.Date()))})
-  # days_left_expire <-as.numeric(order(dfbrew_subset()$License.Expiration.Date -Sys.Date()))
+  # Dotplot: Breweries and Days Until License Expiration (Filter by County)
   
-  output$dotplot <- renderPlot({
+  output$dotplot <- renderPlotly({
     
+    days_left_expire <- as.numeric(order(counties_sample()$License.Expiration.Date - Sys.Date()))
     
-    dotchart(days_left_expire(), labels = input$premise,
-             cex = .7, xlim = c(1,1000),
-             main = "Days Left until License Expires", 
-             xlab = "days")
-    }
-  )
+    #Source: https://plot.ly/r/dot-plots/
+
+    plot_ly(counties_sample(), x = ~days_left_expire, 
+            y = sort(counties_sample()$Premises.Name), 
+            name = "Days until license expires", 
+            type = 'scatter', mode = "markers",
+            marker = list(color = "blue"))
+    
+  })
 
   #Print data table if checked -------------------------------------
   output$brewtable <- DT::renderDataTable(
@@ -220,7 +205,6 @@ server  <- function(input, output, session){
       write.csv(data_to_download, con)
     }
   )
-  
   
 }
 # Run the application -----------------------------------------------
