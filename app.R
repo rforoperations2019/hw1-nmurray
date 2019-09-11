@@ -183,7 +183,13 @@ server  <- function(input, output, session){
             y = sort(counties_sample()$Premises.Name), 
             name = "Days until license expires", 
             type = 'scatter', mode = "markers",
-            marker = list(color = "blue"))
+            marker = list(color = "blue"))%>%
+      layout(
+        title = "Days Until License Expires",
+        scene = list(
+          xaxis = list(title = "Days Until License Expires"),
+          yaxis = list(title = "Breweries, Wineries, Distilleries, Etc.")
+        ))
     
   })
 
